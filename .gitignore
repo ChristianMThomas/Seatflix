@@ -1,0 +1,55 @@
+# Environment variables - NEVER commit these!
+.env
+.env.local
+.env.*.local
+*.env
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+build/
+target/
+
+# IDE and Editor
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Java/Spring Boot
+*.class
+*.jar
+*.war
+HELP.md
+.mvn/wrapper/maven-wrapper.jar
+
+# File uploads (don't commit user-uploaded files)
+uploads/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Claude Code
+.claude/
+
+# Testing
+coverage/
+*.lcov
