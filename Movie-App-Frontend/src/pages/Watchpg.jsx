@@ -4,6 +4,14 @@ import { useParams } from 'react-router-dom';
 const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 const TMDB_API_BASE_URL = "https://api.themoviedb.org/3";
 
+const API_OPTIONS = {
+  method: "GET",
+  headers: {
+    accept: "application/json",
+    Authorization: `Bearer ${TMDB_API_KEY}`,
+  },
+};
+
 const Watchpg = () => {
   const { type, id } = useParams(); // Extract media type (movie/tv) and ID
   const [loading, setLoading] = useState(true);
@@ -15,7 +23,7 @@ const Watchpg = () => {
   // Fetch TV show details to get number of seasons
   useEffect(() => {
     if (type === 'tv') {
-      fetch(`${TMDB_API_BASE_URL}/tv/${id}?api_key=${TMDB_API_KEY}`)
+      fetch(`${TMDB_API_BASE_URL}/tv/${id}`, API_OPTIONS)
         .then(res => res.json())
         .then(data => {
           setTvDetails(data);
@@ -27,7 +35,7 @@ const Watchpg = () => {
   // Fetch season details to get number of episodes
   useEffect(() => {
     if (type === 'tv' && season) {
-      fetch(`${TMDB_API_BASE_URL}/tv/${id}/season/${season}?api_key=${TMDB_API_KEY}`)
+      fetch(`${TMDB_API_BASE_URL}/tv/${id}/season/${season}`, API_OPTIONS)
         .then(res => res.json())
         .then(data => {
           setSeasonData(data);
@@ -102,11 +110,15 @@ const Watchpg = () => {
                     }}
                     className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   >
-                    {tvDetails && Array.from({ length: tvDetails.number_of_seasons }, (_, i) => i + 1).map(num => (
-                      <option key={num} value={num} className="bg-dark-100">
-                        Season {num}
-                      </option>
-                    ))}
+                    {tvDetails?.number_of_seasons ? (
+                      Array.from({ length: tvDetails.number_of_seasons }, (_, i) => i + 1).map(num => (
+                        <option key={num} value={num} className="bg-dark-100">
+                          Season {num}
+                        </option>
+                      ))
+                    ) : (
+                      <option value={1}>Loading seasons...</option>
+                    )}
                   </select>
                 </div>
 
@@ -120,12 +132,16 @@ const Watchpg = () => {
                     onChange={(e) => setEpisode(Number(e.target.value))}
                     className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   >
-                    {seasonData && Array.from({ length: seasonData.episodes.length }, (_, i) => i + 1).map(num => (
-                      <option key={num} value={num} className="bg-dark-100">
-                        Episode {num}
-                        {seasonData.episodes[num - 1]?.name && ` - ${seasonData.episodes[num - 1].name}`}
-                      </option>
-                    ))}
+                    {seasonData?.episodes ? (
+                      Array.from({ length: seasonData.episodes.length }, (_, i) => i + 1).map(num => (
+                        <option key={num} value={num} className="bg-dark-100">
+                          Episode {num}
+                          {seasonData.episodes[num - 1]?.name && ` - ${seasonData.episodes[num - 1].name}`}
+                        </option>
+                      ))
+                    ) : (
+                      <option value={1}>Loading episodes...</option>
+                    )}
                   </select>
                 </div>
               </div>
