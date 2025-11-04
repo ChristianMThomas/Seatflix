@@ -15,7 +15,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * User entity representing application users
@@ -36,7 +36,7 @@ public class Users implements UserDetails {
 
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters long")
-    @JsonIgnore // Don't serialize password in JSON responses
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Allow in requests, hide in responses
     private String password;
 
     @NotBlank(message = "Email is required")
