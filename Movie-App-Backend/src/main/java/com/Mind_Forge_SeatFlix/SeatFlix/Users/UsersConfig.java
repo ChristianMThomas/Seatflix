@@ -84,8 +84,10 @@ public class UsersConfig {
 
             // Configure authorization rules
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints
-                .requestMatchers("/api/v1/users/login", "/api/v1/users/register").permitAll()
+                // Public endpoints - explicitly allow POST methods
+                .requestMatchers(HttpMethod.POST, "/api/v1/users/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/users/register").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow preflight requests
 
                 // All other endpoints require authentication
                 .anyRequest().authenticated()
