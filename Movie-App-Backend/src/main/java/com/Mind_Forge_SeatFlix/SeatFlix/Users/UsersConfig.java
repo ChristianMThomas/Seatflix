@@ -72,7 +72,7 @@ public class UsersConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // Enable CORS
+            // Enable CORS - must be first
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
             // Disable CSRF (safe for stateless JWT authentication)
@@ -82,12 +82,10 @@ public class UsersConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-            // Configure authorization rules
+            // Configure authorization rules - ORDER MATTERS!
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints - explicitly allow POST methods
-                .requestMatchers(HttpMethod.POST, "/api/v1/users/login").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/v1/users/register").permitAll()
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow preflight requests
+                // Public endpoints MUST be first - allow all methods
+                .requestMatchers("/api/v1/users/login", "/api/v1/users/register").permitAll()
 
                 // All other endpoints require authentication
                 .anyRequest().authenticated()
