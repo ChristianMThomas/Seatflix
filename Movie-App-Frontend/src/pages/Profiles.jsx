@@ -42,17 +42,22 @@ function Profile() {
     formData.append("file", file);
 
     try {
-      const res = await api.post(`${endpoints.uploadAvatar}`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      // Don't manually set Content-Type - let browser set it with boundary
+      // The axios interceptor will automatically add the Authorization header
+      const res = await api.post(`${endpoints.uploadAvatar}`, formData);
       setUser(res.data);
       setAvatarPreview(null);
       setError(null);
     } catch (err) {
-      console.error("Upload failed:", err.response?.data || err.message);
-      setError("Avatar upload failed. Please try again.");
+      console.error("Upload failed:", err);
+      console.error("Response data:", err.response?.data);
+      console.error("Response status:", err.response?.status);
+
+      if (err.response?.status === 401) {
+        setError("Session expired. Please log in again.");
+      } else {
+        setError(err.response?.data || "Avatar upload failed. Please try again.");
+      }
     } finally {
       setUploadLoading(false);
     }

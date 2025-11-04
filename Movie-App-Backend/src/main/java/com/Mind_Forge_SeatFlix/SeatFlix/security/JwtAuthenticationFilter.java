@@ -40,28 +40,40 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             jwt = authorizationHeader.substring(7); // Remove "Bearer " prefix
             try {
                 username = jwtUtil.extractUsername(jwt);
+                logger.info("JWT token extracted successfully for user: " + username);
             } catch (Exception e) {
-                logger.error("JWT token extraction failed: " + e.getMessage());
+                logger.error("JWT token extraction failed: " + e.getMessage(), e);
+                // Don't return error here - let the request continue without authentication
+                // Spring Security will return 403 for protected endpoints
             }
+        } else if (authorizationHeader != null) {
+            logger.warn("Authorization header present but doesn't start with 'Bearer '");
         }
 
         // If we have a username and no authentication is set in the context
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+            try {
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
-            // Validate the token
-            if (jwtUtil.validateToken(jwt, userDetails)) {
-                // Create authentication token
-                UsernamePasswordAuthenticationToken authenticationToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities());
+                // Validate the token
+                if (jwtUtil.validateToken(jwt, userDetails)) {
+                    // Create authentication token
+                    UsernamePasswordAuthenticationToken authenticationToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, userDetails.getAuthorities());
 
-                // Set additional details
-                authenticationToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request));
+                    // Set additional details
+                    authenticationToken.setDetails(
+                            new WebAuthenticationDetailsSource().buildDetails(request));
 
-                // Set the authentication in the context
-                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                    // Set the authentication in the context
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                    logger.info("Authentication successful for user: " + username);
+                } else {
+                    logger.warn("JWT token validation failed for user: " + username);
+                }
+            } catch (Exception e) {
+                logger.error("Error during authentication: " + e.getMessage(), e);
             }
         }
 
