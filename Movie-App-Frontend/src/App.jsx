@@ -36,7 +36,7 @@ const App = () => {
               }
             />
             <Route
-              path="/Watch/:id"
+              path="/Watch/:type/:id"
               element={
                 <ProtectedRoute>
                   <Watchpg />
