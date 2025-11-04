@@ -54,9 +54,13 @@ public class UsersConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // Support multiple origins (comma-separated in properties)
-        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+        // Trim whitespace from each origin
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .toList();
+        configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
+        configuration.setAllowedHeaders(List.of("*")); // Allow all headers
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L); // Cache preflight response for 1 hour
 
