@@ -109,27 +109,30 @@ function Profile() {
               <div className="grid md:grid-cols-3 gap-8 items-start">
                 {/* Left - Avatar Section */}
                 <div className="md:col-span-1 space-y-4">
+                  {/* Construction Notice */}
+                  <div className="backdrop-blur-xl bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div>
+                        <p className="text-yellow-300 text-sm font-semibold mb-1">Under Construction</p>
+                        <p className="text-yellow-200/80 text-xs">Profile image upload is currently being developed and is not functional in this beta release.</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="relative group">
-                    <label className="cursor-pointer block">
-                      <div className="relative overflow-hidden rounded-2xl border-4 border-purple-500/30 group-hover:border-purple-500/60 transition-all duration-300">
+                    <label className="cursor-not-allowed block">
+                      <div className="relative overflow-hidden rounded-2xl border-4 border-purple-500/30 opacity-60">
                         <img
                           src={
                             avatarPreview ||
                             (user.profilePic ? `${import.meta.env.VITE_SEATFLIX_API_URL}${user.profilePic}` : "user.png")
                           }
                           alt="Profile"
-                          className="w-full aspect-square object-cover group-hover:scale-110 transition-transform duration-300"
+                          className="w-full aspect-square object-cover"
                         />
-                        {/* Overlay on hover */}
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                          <div className="text-center text-white">
-                            <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            <p className="text-sm font-semibold">Change Photo</p>
-                          </div>
-                        </div>
                         {/* Upload loading indicator */}
                         {uploadLoading && (
                           <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
@@ -143,18 +146,17 @@ function Profile() {
                         className="hidden"
                         ref={fileInputRef}
                         onChange={handleFileChange}
-                        disabled={uploadLoading}
+                        disabled={true}
                       />
                     </label>
                   </div>
 
-                  {/* Upload button */}
+                  {/* Upload button - Disabled */}
                   <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadLoading}
-                    className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    disabled={true}
+                    className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl opacity-50 cursor-not-allowed"
                   >
-                    {uploadLoading ? "Uploading..." : "Upload New Photo"}
+                    Coming Soon
                   </button>
 
                   {error && (

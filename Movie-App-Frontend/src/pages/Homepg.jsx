@@ -9,12 +9,12 @@ const Homepg = () => {
         <header className="animate-fade-in">
           <div className="text-center space-y-6">
             <h1 className="text-6xl md:text-8xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-600 bg-clip-text text-transparent">
-              Mind-Forge
-            </h1>
-            <h2 className="text-4xl md:text-5xl font-bold text-white">
               SeatFlix
-            </h2>
+            </h1>
             <p className="text-xl md:text-2xl text-light-200 max-w-3xl mx-auto">
+              by <span className="font-semibold text-purple-400">ITT</span> - Infinite Tech Team
+            </p>
+            <p className="text-lg text-light-200 max-w-3xl mx-auto">
               Your premium streaming experience awaits
             </p>
           </div>
@@ -96,13 +96,13 @@ const Homepg = () => {
             </h2>
             <div className="max-w-4xl mx-auto space-y-6 text-light-200 text-lg leading-relaxed">
               <p>
-                At Mind-Forge, we are committed to providing a <span className="text-purple-400 font-semibold">safe and trustworthy streaming experience</span>. Your privacy is safeguarded with industry-leading encryption, and your data is handled responsibly in compliance with privacy laws.
+                At <span className="text-purple-400 font-semibold">ITT (Infinite Tech Team)</span>, we are committed to providing a <span className="text-purple-400 font-semibold">safe and trustworthy streaming experience</span>. Your privacy is safeguarded with industry-leading encryption, and your data is handled responsibly in compliance with privacy laws.
               </p>
               <p>
                 All content on our platform is carefully curated to ensure a <span className="text-purple-400 font-semibold">premium entertainment experience</span> for all users. Stream with confidence, knowing your safety is our top priority.
               </p>
               <p className="text-center pt-6 text-light-100 italic">
-                Thank you for choosing SeatFlix - ©️ Mind-Forge 2025
+                Thank you for choosing SeatFlix - ©️ ITT (Infinite Tech Team) 2025
               </p>
             </div>
           </div>

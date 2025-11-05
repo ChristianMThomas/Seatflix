@@ -3,7 +3,7 @@ import React from 'react';
 function Tos() {
   const fileContents = `
 1. Acceptance of Terms
-By accessing or using mind-forge-cthomas.com, you agree to comply with and be bound by these Terms of Service. If you do not agree, please do not use our services.
+By accessing or using SeatFlix, you agree to comply with and be bound by these Terms of Service. If you do not agree, please do not use our services.
 
 2. Use of Services
 You agree to use our services only for lawful purposes and in accordance with these terms. You must not misuse our services or attempt to disrupt them.
@@ -19,8 +19,8 @@ We reserve the right to update these Terms of Service at any time. Continued use
 
 6. Contact Information
 If you have questions about these terms, please contact us at:
-1-478-365-9153
-ct1783@mind-forge-cthomas.com
+ITT (Infinite Tech Team)
+support@infinitetechteam.com
   `;
 
   const createDownloadLink = () => {
