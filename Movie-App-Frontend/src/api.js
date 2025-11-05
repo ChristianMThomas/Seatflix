@@ -28,11 +28,15 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Only clear auth on 401 if it's actually an auth error, not a network error
     if (error.response?.status === 401) {
+      console.warn("🚫 Received 401 Unauthorized - clearing auth and redirecting to login");
       // Clear token and redirect to login
       localStorage.removeItem("authToken");
       localStorage.removeItem("user");
-      window.location.href = "/login";
+      localStorage.removeItem("userId");
+      // Use "/" instead of "/login" to match the route in App.jsx
+      window.location.href = "/";
     }
     return Promise.reject(error);
   }
