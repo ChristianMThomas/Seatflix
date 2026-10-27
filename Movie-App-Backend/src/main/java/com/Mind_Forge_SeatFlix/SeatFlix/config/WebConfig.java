@@ -20,7 +20,8 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Serve static files from the local "uploads" folder — path is relative to project root
+        // Legacy: avatars used to be written to the local "uploads" folder. New uploads go to
+        // Cloudflare R2 (see R2StorageService); this only serves any files left on disk.
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:uploads/") // no leading slash here
                 .setCachePeriod(3600); // optional: set browser cache time in seconds

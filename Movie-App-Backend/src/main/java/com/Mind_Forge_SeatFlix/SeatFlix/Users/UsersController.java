@@ -7,15 +7,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.Mind_Forge_SeatFlix.SeatFlix.config.CustomUserDetails;
 import com.Mind_Forge_SeatFlix.SeatFlix.entity.Users;
+import com.Mind_Forge_SeatFlix.SeatFlix.storage.R2StorageService;
 import com.Mind_Forge_SeatFlix.SeatFlix.util.JwtUtil;
 
 import jakarta.validation.Valid;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +40,7 @@ public class UsersController {
 
     private final UsersService userService;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final R2StorageService storageService;
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -50,9 +48,11 @@ public class UsersController {
     @Autowired
     private JwtUtil jwtUtil;
 
-    public UsersController(UsersService userService, BCryptPasswordEncoder passwordEncoder) {
+    public UsersController(UsersService userService, BCryptPasswordEncoder passwordEncoder,
+            R2StorageService storageService) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
+        this.storageService = storageService;
     }
 
     @GetMapping
@@ -151,41 +151,59 @@ public class UsersController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No file uploaded");
         }
 
+        if (!storageService.isConfigured()) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body("Avatar uploads are not available right now");
+        }
+
         try {
             Long userId = userDetails.getId();
+            byte[] bytes = file.getBytes();
 
-            // Validate file type
-            String contentType = file.getContentType();
-            if (contentType == null || !contentType.startsWith("image/")) {
+            // Detect the real image type from the file's bytes; never trust the client's
+            // Content-Type header or filename
+            String[] imageType = detectImageType(bytes);
+            if (imageType == null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body("Only image files are allowed");
+                        .body("Only JPEG, PNG or WebP images are allowed");
             }
 
-            // Save avatar and update user
-            // Extract file extension safely
-            String originalFilename = file.getOriginalFilename();
-            String fileExtension = "";
-            if (originalFilename != null && originalFilename.contains(".")) {
-                fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            }
+            Users existing = userService.getUserById(userId);
+            String previousPic = existing != null ? existing.getProfilePic() : null;
 
-            // Generate secure UUID-based filename
-            String fileName = UUID.randomUUID().toString() + fileExtension;
-
-            Path uploadDir = Paths.get("uploads/avatars/" + userId);
-            Files.createDirectories(uploadDir);
-
-            Path filePath = uploadDir.resolve(fileName);
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            String fileUrl = "/uploads/avatars/" + userId + "/" + fileName;
+            // Unique key per upload so cached copies of the old avatar never linger
+            String key = "avatars/" + userId + "/" + UUID.randomUUID() + "." + imageType[1];
+            String fileUrl = storageService.upload(key, bytes, imageType[0]);
             Users user = userService.updateProfilePic(userId, fileUrl);
+
+            storageService.deleteByUrl(previousPic);
 
             return ResponseEntity.ok(user);
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to upload avatar: " + e.getMessage());
+                    .body("Failed to read uploaded file");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to upload avatar. Please try again.");
         }
+    }
+
+    /**
+     * Identify an image by its magic bytes.
+     * @return {contentType, extension}, or null if not a supported image
+     */
+    private static String[] detectImageType(byte[] b) {
+        if (b.length >= 3 && (b[0] & 0xFF) == 0xFF && (b[1] & 0xFF) == 0xD8 && (b[2] & 0xFF) == 0xFF) {
+            return new String[] { "image/jpeg", "jpg" };
+        }
+        if (b.length >= 8 && (b[0] & 0xFF) == 0x89 && b[1] == 'P' && b[2] == 'N' && b[3] == 'G') {
+            return new String[] { "image/png", "png" };
+        }
+        if (b.length >= 12 && b[0] == 'R' && b[1] == 'I' && b[2] == 'F' && b[3] == 'F'
+                && b[8] == 'W' && b[9] == 'E' && b[10] == 'B' && b[11] == 'P') {
+            return new String[] { "image/webp", "webp" };
+        }
+        return null;
     }
 
     @GetMapping("/me")

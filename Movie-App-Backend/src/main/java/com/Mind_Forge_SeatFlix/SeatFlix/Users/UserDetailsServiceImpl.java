@@ -1,13 +1,12 @@
 package com.Mind_Forge_SeatFlix.SeatFlix.Users;
 
-import java.util.ArrayList;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import com.Mind_Forge_SeatFlix.SeatFlix.config.CustomUserDetails;
 import com.Mind_Forge_SeatFlix.SeatFlix.entity.Users;
 
 @Service
@@ -20,10 +19,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         Users user = usersRepository.findUserByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        return new org.springframework.security.core.userdetails.User(
-                user.getUsername(),
-                user.getPassword(),
-                new ArrayList<>()
-        );
+        // Must be CustomUserDetails: controllers resolve @AuthenticationPrincipal CustomUserDetails,
+        // which comes back null (-> 401) for any other principal type
+        return new CustomUserDetails(user);
     }
 }
