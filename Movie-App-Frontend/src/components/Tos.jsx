@@ -32,7 +32,7 @@ support@infinitetechteam.com
     <a
       href={createDownloadLink()}
       download="terms_of_service.txt"
-      className="hover:text-gray-400"
+      className="text-light-200 hover:text-brand transition-colors text-sm"
     >
       Terms of Service
     </a>

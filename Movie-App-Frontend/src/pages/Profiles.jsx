@@ -1,15 +1,28 @@
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import api, { endpoints } from "../api";
+import Spinner from "../components/Spinner";
+import { tmdb, img } from "../tmdb";
+import { avatarUrl, prepareAvatar } from "../avatar";
 
 function Profile() {
-  const { logout } = useAuth();
+  const { logout, user: authUser, updateUser } = useAuth();
   const [user, setUser] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [dragging, setDragging] = useState(false);
   const [error, setError] = useState(null);
+  const [banner, setBanner] = useState(null);
   const fileInputRef = useRef();
+
+  // Keep the navbar avatar in sync with the server copy
+  const syncAuthAvatar = (profilePic) => {
+    if (authUser && authUser.profilePic !== profilePic) {
+      updateUser({ ...authUser, profilePic });
+    }
+  };
 
   useEffect(() => {
     const userId = localStorage.getItem("userId");
@@ -23,6 +36,7 @@ function Profile() {
       .get(`${endpoints.getUser}/${userId}`)
       .then((res) => {
         setUser(res.data);
+        syncAuthAvatar(res.data.profilePic);
         setLoading(false);
       })
       .catch((err) => {
@@ -32,21 +46,44 @@ function Profile() {
       });
   }, []);
 
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  // Decorative banner: a random backdrop from this week's trending titles
+  useEffect(() => {
+    tmdb("/trending/all/week")
+      .then((data) => {
+        const withBackdrops = data.results.filter((item) => item.backdrop_path);
+        const pick = withBackdrops[Math.floor(Math.random() * withBackdrops.length)];
+        setBanner(pick?.backdrop_path || null);
+      })
+      .catch(() => setBanner(null));
+  }, []);
 
-    setAvatarPreview(URL.createObjectURL(file));
+  const uploadAvatar = async (file) => {
+    if (!file || uploadLoading) return;
+    setError(null);
+
+    let blob;
+    try {
+      blob = await prepareAvatar(file);
+    } catch (err) {
+      setError(err.message);
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(blob);
+    setAvatarPreview(previewUrl);
     setUploadLoading(true);
+    setUploadProgress(0);
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", blob, "avatar.jpg");
 
     try {
       // Don't manually set Content-Type - let browser set it with boundary
       // The axios interceptor will automatically add the Authorization header
-      const res = await api.post(`${endpoints.uploadAvatar}`, formData);
+      const res = await api.post(`${endpoints.uploadAvatar}`, formData, {
+        onUploadProgress: (e) => e.total && setUploadProgress(Math.round((e.loaded / e.total) * 100)),
+      });
       setUser(res.data);
-      setAvatarPreview(null);
+      syncAuthAvatar(res.data.profilePic);
       setError(null);
     } catch (err) {
       console.error("Upload failed:", err);
@@ -55,21 +92,33 @@ function Profile() {
 
       if (err.response?.status === 401) {
         setError("Session expired. Please log in again.");
+      } else if (err.response?.status === 413) {
+        setError("That image is too large. Please choose a smaller one.");
       } else {
-        setError(err.response?.data || "Avatar upload failed. Please try again.");
+        setError(typeof err.response?.data === "string" ? err.response.data : "Avatar upload failed. Please try again.");
       }
     } finally {
+      setAvatarPreview(null);
+      URL.revokeObjectURL(previewUrl);
       setUploadLoading(false);
     }
+  };
+
+  const handleFileChange = (e) => {
+    uploadAvatar(e.target.files[0]);
+    e.target.value = ""; // allow re-selecting the same file
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    uploadAvatar(e.dataTransfer.files[0]);
   };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin h-12 w-12 border-4 border-purple-500 border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-light-200 text-lg">Loading profile...</p>
-        </div>
+        <Spinner label="Loading profile..." />
       </div>
     );
   }
@@ -77,164 +126,194 @@ function Profile() {
   if (error && !user) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="backdrop-blur-xl bg-red-500/10 border border-red-500/50 rounded-2xl p-8 text-center max-w-md animate-shake">
-          <svg className="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="panel border-ember/40 p-8 text-center max-w-md animate-shake">
+          <svg className="w-14 h-14 text-ember mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <h2 className="text-xl font-bold text-red-400 mb-2">Error</h2>
-          <p className="text-red-300">{error}</p>
+          <h2 className="text-xl font-bold text-white mb-2">Something went wrong</h2>
+          <p className="text-light-200">{error}</p>
         </div>
       </div>
     );
   }
 
+  const stats = [
+    { label: "Movies Watched", value: 0 },
+    { label: "Favorites", value: 0 },
+    { label: "Watchlist", value: 0 },
+  ];
+
   return (
     <main className="relative min-h-screen">
-      {/* Background Pattern */}
-      <div className="pattern opacity-30" />
+      {/* Banner */}
+      <div className="absolute inset-x-0 top-0 h-[380px] sm:h-[460px] overflow-hidden">
+        {banner ? (
+          <img src={img(banner, "w1280")} alt="" className="w-full h-full object-cover animate-ken-burns animate-fade-in" />
+        ) : (
+          <img src="/hero-bg.png" alt="" className="w-full h-full object-cover opacity-60" />
+        )}
+        <div className="absolute inset-0 bg-primary/40" />
+        <div className="absolute inset-0 scrim-bottom" />
+      </div>
 
-      <div className="wrapper py-12">
-        <div className="max-w-4xl mx-auto animate-fade-in">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent">
-              My Profile
-            </h1>
-            <p className="text-light-200 mt-2">Manage your account settings</p>
-          </div>
-
-          {/* Profile Card */}
-          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl animate-slide-in-up">
-            {user && (
-              <div className="grid md:grid-cols-3 gap-8 items-start">
-                {/* Left - Avatar Section */}
-                <div className="md:col-span-1 space-y-4">
-                  {/* Construction Notice */}
-                  <div className="backdrop-blur-xl bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
-                    <div className="flex items-start gap-3">
-                      <svg className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      <div>
-                        <p className="text-yellow-300 text-sm font-semibold mb-1">Under Construction</p>
-                        <p className="text-yellow-200/80 text-xs">Profile image upload is currently being developed and is not functional in this beta release.</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="relative group">
-                    <label className="cursor-not-allowed block">
-                      <div className="relative overflow-hidden rounded-2xl border-4 border-purple-500/30 opacity-60">
-                        <img
-                          src={
-                            avatarPreview ||
-                            (user.profilePic ? `${import.meta.env.VITE_SEATFLIX_API_URL}${user.profilePic}` : "user.png")
-                          }
-                          alt="Profile"
-                          className="w-full aspect-square object-cover"
-                        />
-                        {/* Upload loading indicator */}
-                        {uploadLoading && (
-                          <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
-                            <div className="animate-spin h-10 w-10 border-4 border-purple-500 border-t-transparent rounded-full"></div>
-                          </div>
-                        )}
-                      </div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        disabled={true}
-                      />
-                    </label>
-                  </div>
-
-                  {/* Upload button - Disabled */}
-                  <button
-                    disabled={true}
-                    className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl opacity-50 cursor-not-allowed"
+      <div className="wrapper">
+        {user && (
+          <div className="w-full max-w-5xl mx-auto pt-32 sm:pt-48 animate-slide-in-up">
+            {/* Identity */}
+            <div className="flex flex-col sm:flex-row sm:items-end gap-6 mb-10">
+              <div className="relative shrink-0">
+                <label
+                  className={`group block ${uploadLoading ? "cursor-wait" : "cursor-pointer"}`}
+                  title="Change avatar"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragging(true);
+                  }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={handleDrop}
+                >
+                  <div
+                    className={`relative w-32 h-32 sm:w-40 sm:h-40 rounded-full p-1 bg-gradient-to-br from-brand via-ember to-brand/30 transition-all duration-300 ${
+                      dragging
+                        ? "scale-105 shadow-[0_0_80px_-5px_rgba(239,35,60,0.9)]"
+                        : "shadow-[0_0_60px_-10px_rgba(239,35,60,0.6)]"
+                    }`}
                   >
-                    Coming Soon
-                  </button>
+                    <div className="relative w-full h-full rounded-full overflow-hidden bg-surface-2 ring-4 ring-primary">
+                      <img
+                        src={avatarPreview || avatarUrl(user.profilePic)}
+                        alt="Profile"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
 
-                  {error && (
-                    <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-3">
-                      <p className="text-red-400 text-sm text-center">{error}</p>
-                    </div>
-                  )}
-                </div>
+                      {/* Hover / drag affordance */}
+                      {!uploadLoading && (
+                        <div
+                          className={`absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/60 text-white text-xs font-bold transition-opacity ${
+                            dragging ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                          }`}
+                        >
+                          <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.6l1.4-2h7l1.4 2h1.6A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5v-9Z" />
+                            <circle cx="12" cy="13" r="3.5" />
+                          </svg>
+                          {dragging ? "Drop to upload" : "Change"}
+                        </div>
+                      )}
 
-                {/* Right - User Information */}
-                <div className="md:col-span-2 space-y-6">
-                  <div className="space-y-4">
-                    {/* Username */}
-                    <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-4">
-                      <label className="text-sm font-medium text-light-200 block mb-2">
-                        Username
-                      </label>
-                      <p className="text-white text-lg font-semibold">{user.username}</p>
-                    </div>
-
-                    {/* Email */}
-                    <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-4">
-                      <label className="text-sm font-medium text-light-200 block mb-2">
-                        Email Address
-                      </label>
-                      <p className="text-white text-lg font-semibold">{user.email}</p>
-                    </div>
-
-                    {/* Join Date */}
-                    <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-4">
-                      <label className="text-sm font-medium text-light-200 block mb-2">
-                        Member Since
-                      </label>
-                      <p className="text-white text-lg font-semibold">
-                        {user.dateJoined || "N/A"}
-                      </p>
+                      {/* Upload progress ring */}
+                      {uploadLoading && (
+                        <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                          <svg className="absolute inset-2 -rotate-90" viewBox="0 0 100 100" aria-hidden="true">
+                            <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" />
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="46"
+                              fill="none"
+                              stroke="var(--color-brand)"
+                              strokeWidth="4"
+                              strokeLinecap="round"
+                              strokeDasharray={289}
+                              strokeDashoffset={289 - (289 * uploadProgress) / 100}
+                              className="transition-[stroke-dashoffset] duration-200"
+                            />
+                          </svg>
+                          <span className="text-white font-bold text-sm" role="status">
+                            {uploadProgress < 100 ? `${uploadProgress}%` : "Saving…"}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    disabled={uploadLoading}
+                  />
+                </label>
+              </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-white/10">
-                    <button
-                      className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-blue-500/50"
-                    >
-                      Reset Password
-                    </button>
+              <div className="min-w-0 pb-2">
+                <p className="eyebrow mb-2">
+                  <span className="w-6 h-px bg-brand" />
+                  Your account
+                </p>
+                <h1 className="truncate">{user.username}</h1>
+                {user.dateJoined && (
+                  <p className="text-light-200 mt-2 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-brand animate-pulse" />
+                    Member since {user.dateJoined}
+                  </p>
+                )}
+              </div>
 
-                    <button
-                      onClick={logout}
-                      className="flex-1 py-3 px-4 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-red-500/50"
-                    >
-                      Logout
-                    </button>
-                  </div>
+              <div className="sm:ml-auto flex gap-3 pb-2">
+                <button className="btn-secondary">Reset Password</button>
+                <button onClick={logout} className="btn-primary">Sign Out</button>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-3 sm:gap-5 mb-8">
+              {stats.map(({ label, value }) => (
+                <div key={label} className="panel relative overflow-hidden p-5 sm:p-7 group">
+                  <div className="absolute -right-8 -top-8 w-24 h-24 rounded-full bg-brand/10 blur-2xl transition-opacity opacity-50 group-hover:opacity-100" />
+                  <p className="relative font-display text-5xl sm:text-7xl text-white leading-none">{value}</p>
+                  <p className="relative text-light-200 text-xs sm:text-sm mt-2">{label}</p>
                 </div>
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
 
-          {/* Additional Info Section */}
-          <div className="mt-8 backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 animate-slide-in-up delay-200">
-            <h3 className="text-xl font-semibold text-white mb-4">Account Activity</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-white/5 rounded-xl">
-                <p className="text-3xl font-bold text-purple-400">0</p>
-                <p className="text-light-200 text-sm mt-1">Movies Watched</p>
+            <div className="grid md:grid-cols-[1.4fr_1fr] gap-5 items-start">
+              {/* Details */}
+              <div className="panel">
+                <h2 className="px-6 pt-6 pb-2 font-display text-3xl font-normal">Details</h2>
+                <dl className="divide-y divide-white/5">
+                  {[
+                    { label: "Username", value: user.username },
+                    { label: "Email Address", value: user.email },
+                    { label: "Member Since", value: user.dateJoined || "N/A" },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 px-6 py-4">
+                      <dt className="text-sm text-gray-100">{label}</dt>
+                      <dd className="text-white font-semibold break-all">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
               </div>
-              <div className="text-center p-4 bg-white/5 rounded-xl">
-                <p className="text-3xl font-bold text-pink-400">0</p>
-                <p className="text-light-200 text-sm mt-1">Favorites</p>
-              </div>
-              <div className="text-center p-4 bg-white/5 rounded-xl">
-                <p className="text-3xl font-bold text-blue-400">0</p>
-                <p className="text-light-200 text-sm mt-1">Watchlist</p>
+
+              {/* Avatar */}
+              <div className="panel p-6 space-y-4">
+                <h2 className="font-display text-3xl font-normal">Avatar</h2>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadLoading}
+                  className="btn-primary w-full"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+                  </svg>
+                  {uploadLoading ? "Uploading…" : "Upload new photo"}
+                </button>
+
+                <p className="text-xs text-light-200 leading-relaxed">
+                  Click or drag an image onto your avatar. JPG, PNG or WebP up to 15 MB. It's cropped to a
+                  square and location data is removed before upload.
+                </p>
+
+                {error && (
+                  <div className="alert-error" role="alert">
+                    <p className="text-white text-sm">{error}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </main>
   );
