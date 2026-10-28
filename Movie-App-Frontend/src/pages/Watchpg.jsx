@@ -27,6 +27,23 @@ const Watchpg = () => {
   const [lightsOff, setLightsOff] = useState(false);
   const [showTrailer, setShowTrailer] = useState(false);
   const playerRef = useRef(null);
+  const seasonScroller = useRef(null);
+  const [seasonScroll, setSeasonScroll] = useState({ left: false, right: false });
+
+  // Track whether the season strip can scroll further in each direction
+  const updateSeasonScroll = () => {
+    const el = seasonScroller.current;
+    if (!el) return;
+    setSeasonScroll({
+      left: el.scrollLeft > 1,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
+    });
+  };
+
+  const scrollSeasons = (dir) => {
+    const el = seasonScroller.current;
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: 'smooth' });
+  };
 
   // Load details (with cast, trailers, logos, recommendations) and reset per-title state
   useEffect(() => {
@@ -76,6 +93,25 @@ const Watchpg = () => {
       playerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [playing, embedUrl]);
+
+  // Re-measure the season strip when seasons load or the viewport resizes
+  useEffect(() => {
+    const el = seasonScroller.current;
+    if (!el) return;
+    updateSeasonScroll();
+    const observer = new ResizeObserver(updateSeasonScroll);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [details]);
+
+  // Keep the selected season pill visible inside the strip
+  useEffect(() => {
+    const el = seasonScroller.current;
+    const pill = el?.querySelector(`[data-season="${season}"]`);
+    if (!el || !pill) return;
+    const target = pill.offsetLeft - (el.clientWidth - pill.offsetWidth) / 2;
+    el.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+  }, [season, details]);
 
   useEffect(() => {
     if (!lightsOff && !showTrailer) return;
@@ -300,7 +336,7 @@ const Watchpg = () => {
                 )}
                 <span className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-black/40" />
                 <span className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-                  <span className="relative flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-brand text-white shadow-[0_0_60px_rgba(239,35,60,0.7)] transition-transform duration-300 group-hover:scale-110">
+                  <span className="relative flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-brand text-white shadow-[0_0_60px_rgb(var(--brand-rgb)/0.7)] transition-transform duration-300 group-hover:scale-110">
                     <span className="absolute inset-0 rounded-full bg-brand animate-ping opacity-30" />
                     <PlayIcon className="w-9 h-9 ml-1 relative" />
                   </span>
@@ -351,25 +387,57 @@ const Watchpg = () => {
             </div>
 
             {/* Season pills */}
-            <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2 mb-4" role="tablist" aria-label="Seasons">
-              {(seasons.length ? seasons : [{ season_number: 1, name: 'Season 1' }]).map((s) => (
-                <button
-                  key={s.season_number}
-                  role="tab"
-                  aria-selected={season === s.season_number}
-                  onClick={() => {
-                    setSeason(s.season_number);
-                    setEpisode(1); // Reset to episode 1 when changing season
-                  }}
-                  className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold border transition-all cursor-pointer ${
-                    season === s.season_number
-                      ? 'bg-white text-black border-white'
-                      : 'bg-white/5 text-light-200 border-white/10 hover:text-white hover:border-white/30'
-                  }`}
-                >
-                  {s.name || `Season ${s.season_number}`}
+            <div className="relative flex items-center gap-2 mb-4">
+              {seasonScroll.left && (
+                <button onClick={() => scrollSeasons(-1)} className="btn-icon w-9 h-9 shrink-0" aria-label="Previous seasons">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m15 19-7-7 7-7" />
+                  </svg>
                 </button>
-              ))}
+              )}
+              <div className="relative min-w-0 flex-1">
+                <div
+                  ref={seasonScroller}
+                  onScroll={updateSeasonScroll}
+                  className="relative flex gap-2 overflow-x-auto hide-scrollbar py-1"
+                  role="tablist"
+                  aria-label="Seasons"
+                >
+                  {(seasons.length ? seasons : [{ season_number: 1, name: 'Season 1' }]).map((s) => (
+                    <button
+                      key={s.season_number}
+                      data-season={s.season_number}
+                      role="tab"
+                      aria-selected={season === s.season_number}
+                      onClick={() => {
+                        setSeason(s.season_number);
+                        setEpisode(1); // Reset to episode 1 when changing season
+                      }}
+                      className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold border transition-all cursor-pointer ${
+                        season === s.season_number
+                          ? 'bg-white text-black border-white'
+                          : 'bg-white/5 text-light-200 border-white/10 hover:text-white hover:border-white/30'
+                      }`}
+                    >
+                      {s.name || `Season ${s.season_number}`}
+                    </button>
+                  ))}
+                </div>
+                {/* Edge fades hint that more seasons are off-screen */}
+                {seasonScroll.left && (
+                  <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-primary to-transparent" />
+                )}
+                {seasonScroll.right && (
+                  <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-primary to-transparent" />
+                )}
+              </div>
+              {seasonScroll.right && (
+                <button onClick={() => scrollSeasons(1)} className="btn-icon w-9 h-9 shrink-0" aria-label="More seasons">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m9 5 7 7-7 7" />
+                  </svg>
+                </button>
+              )}
             </div>
 
             <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -383,7 +451,7 @@ const Watchpg = () => {
                           onClick={() => playEpisode(ep.episode_number)}
                           className={`group w-full flex gap-4 p-2.5 rounded-2xl text-left border transition-all duration-300 cursor-pointer ${
                             active
-                              ? 'bg-brand/10 border-brand/50 shadow-[0_0_30px_-10px_rgba(239,35,60,0.5)]'
+                              ? 'bg-brand/10 border-brand/50 shadow-[0_0_30px_-10px_rgb(var(--brand-rgb)/0.5)]'
                               : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.07] hover:border-white/15'
                           }`}
                         >

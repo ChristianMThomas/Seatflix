@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300..800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@100&family=Instrument+Serif:ital@0;1&family=Manrope:wght@300..800&display=swap");
 
 @import "tailwindcss";
 
@@ -11,6 +11,7 @@
   --color-brand: #ef233c;
   --color-brand-dark: #c1121f;
   --color-ember: #ff4d6d;
+  --color-brand-glow: #ff5a6e;
 
   --color-light-100: #f3f1ec;
   --color-light-200: #a8a6b3;
@@ -32,6 +33,30 @@
   --animate-float: float 6s ease-in-out infinite;
 }
 
+/* Channels of --color-brand, for glows that need an alpha */
+:root {
+  --brand-rgb: 239 35 60;
+  --haze-rgb: 120 80 255;
+  --haze-alpha: 0.06;
+}
+
+/* Spooky mode: pumpkin orange and witching-hour purple on a near-black */
+html[data-theme="halloween"] {
+  --color-primary: #08050c;
+  --color-surface: #110b18;
+  --color-surface-2: #191122;
+  --color-surface-3: #241830;
+  --color-brand: #ff7518;
+  --color-brand-dark: #d35400;
+  --color-ember: #a855f7;
+  --color-brand-glow: #ffae42;
+  --color-light-200: #b3a8c2;
+  --color-gray-100: #786c88;
+  --brand-rgb: 255 117 24;
+  --haze-rgb: 147 51 234;
+  --haze-alpha: 0.14;
+}
+
 @layer base {
   html {
     color-scheme: dark;
@@ -41,8 +66,8 @@
   body {
     font-family: var(--font-sans);
     background:
-      radial-gradient(1200px 600px at 85% -10%, rgba(239, 35, 60, 0.07), transparent 60%),
-      radial-gradient(900px 500px at -10% 30%, rgba(120, 80, 255, 0.06), transparent 60%),
+      radial-gradient(1200px 600px at 85% -10%, rgb(var(--brand-rgb) / 0.07), transparent 60%),
+      radial-gradient(900px 500px at -10% 30%, rgb(var(--haze-rgb) / var(--haze-alpha)), transparent 60%),
       var(--color-primary);
     background-attachment: fixed;
     color: var(--color-light-100);
@@ -103,7 +128,7 @@
 
     & svg {
       @apply h-[0.9em] w-[0.9em] text-brand;
-      filter: drop-shadow(0 0 10px rgba(239, 35, 60, 0.55));
+      filter: drop-shadow(0 0 10px rgb(var(--brand-rgb) / 0.55));
     }
 
     & em {
@@ -126,7 +151,7 @@
 
   /* Buttons */
   .btn-primary {
-    @apply relative inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-bold text-white bg-gradient-to-r from-brand to-[#ff5a6e] shadow-[0_8px_30px_-6px_rgba(239,35,60,0.6)] transition-all duration-300 hover:shadow-[0_10px_40px_-4px_rgba(239,35,60,0.85)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 cursor-pointer;
+    @apply relative inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-bold text-white bg-gradient-to-r from-brand to-brand-glow shadow-[0_8px_30px_-6px_rgb(var(--brand-rgb)/0.6)] transition-all duration-300 hover:shadow-[0_10px_40px_-4px_rgb(var(--brand-rgb)/0.85)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 cursor-pointer;
   }
 
   .btn-light {
@@ -147,7 +172,7 @@
 
   /* Form fields */
   .field {
-    @apply w-full px-4 pt-6 pb-2 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder-transparent outline-none transition-all duration-200 focus:border-brand/70 focus:bg-white/[0.07] focus:shadow-[0_0_0_4px_rgba(239,35,60,0.12)];
+    @apply w-full px-4 pt-6 pb-2 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder-transparent outline-none transition-all duration-200 focus:border-brand/70 focus:bg-white/[0.07] focus:shadow-[0_0_0_4px_rgb(var(--brand-rgb)/0.12)];
   }
 
   .field-label {
@@ -219,8 +244,8 @@
     @apply font-display leading-[0.8] select-none;
     font-size: clamp(110px, 14vw, 180px);
     color: var(--color-primary);
-    -webkit-text-stroke: 2px rgba(239, 35, 60, 0.75);
-    text-shadow: 0 0 40px rgba(239, 35, 60, 0.25);
+    -webkit-text-stroke: 2px rgb(var(--brand-rgb) / 0.75);
+    text-shadow: 0 0 40px rgb(var(--brand-rgb) / 0.25);
   }
 }
 
@@ -327,3 +352,91 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Spooky mode */
+@keyframes batFly {
+  0% { transform: translate(-10vw, 0) scale(var(--bat-scale, 1)); }
+  25% { transform: translate(25vw, -4vh) scale(var(--bat-scale, 1)); }
+  50% { transform: translate(55vw, 3vh) scale(var(--bat-scale, 1)); }
+  75% { transform: translate(85vw, -3vh) scale(var(--bat-scale, 1)); }
+  100% { transform: translate(115vw, 1vh) scale(var(--bat-scale, 1)); }
+}
+
+@keyframes batFlap {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.35); }
+}
+
+@keyframes fogDrift {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  45% { opacity: 0.85; }
+  50% { opacity: 0.55; }
+  55% { opacity: 0.95; }
+  80% { opacity: 0.75; }
+}
+
+/* Hard cut in on a blown-out frame, violent shake, then a slow creep toward the viewer */
+@keyframes scareJolt {
+  0% { transform: scale(1.18); filter: brightness(2.2) contrast(1.6); }
+  4% { transform: scale(1.06) translate(-2%, 1%) rotate(-1.5deg); filter: brightness(1.15) contrast(1.25); }
+  8% { transform: scale(1.09) translate(2%, -1.5%) rotate(1.5deg); }
+  12% { transform: scale(1.05) translate(-1.5%, -1%) rotate(-1deg); }
+  16% { transform: scale(1.08) translate(1.5%, 1.5%) rotate(1deg); }
+  20% { transform: scale(1.06) translate(-1%, 0.5%); }
+  24% { transform: scale(1.07) translate(0.5%, -0.5%); filter: brightness(1) contrast(1.2); }
+  100% { transform: scale(1.16); filter: brightness(0.9) contrast(1.2); }
+}
+
+.bat {
+  position: absolute;
+  left: 0;
+  animation: batFly var(--bat-duration, 18s) linear infinite;
+  animation-delay: var(--bat-delay, 0s);
+  & svg {
+    animation: batFlap 0.28s ease-in-out infinite;
+  }
+}
+
+.fog {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 200%;
+  height: 40vh;
+  background:
+    radial-gradient(40% 60% at 20% 100%, rgb(var(--haze-rgb) / 0.18), transparent 70%),
+    radial-gradient(35% 50% at 55% 100%, rgba(255, 255, 255, 0.05), transparent 70%),
+    radial-gradient(40% 60% at 80% 100%, rgb(var(--brand-rgb) / 0.08), transparent 70%);
+  animation: fogDrift 45s linear infinite;
+}
+
+.animate-flicker {
+  animation: flicker 2.4s ease-in-out infinite;
+}
+
+/* Possession: the hairline "LET GO" that strobes while the user fights the cursor */
+@keyframes letGoFlash {
+  0% { opacity: 1; transform: translate(0, 0); }
+  50% { opacity: 0; transform: translate(-1.5%, 1%); }
+}
+
+.let-go {
+  font-family: "Big Shoulders Display", ui-sans-serif, sans-serif;
+  font-weight: 100;
+  font-size: clamp(120px, 28vw, 440px);
+  line-height: 0.85;
+  letter-spacing: 0.03em;
+  color: #ff1a1a;
+  text-shadow: 0 0 28px rgba(255, 0, 0, 0.55);
+  animation: letGoFlash 0.24s steps(1) infinite;
+}
+
+.animate-scare-jolt {
+  animation: scareJolt 2.4s linear both;
+}
+

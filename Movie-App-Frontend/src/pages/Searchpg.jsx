@@ -154,7 +154,7 @@ const Searchpg = () => {
                   onClick={() => setGenre(id)}
                   className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold border transition-all duration-200 cursor-pointer ${
                     genre === id
-                      ? 'bg-brand text-white border-brand shadow-[0_0_20px_rgba(239,35,60,0.4)]'
+                      ? 'bg-brand text-white border-brand shadow-[0_0_20px_rgb(var(--brand-rgb)/0.4)]'
                       : 'bg-white/5 text-light-200 border-white/10 hover:text-white hover:border-white/30'
                   }`}
                 >

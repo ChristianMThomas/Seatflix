@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Logo from "./Logo";
+import SpookyControls from "./SpookyControls";
 import { avatarUrl, hasCustomAvatar } from "../avatar";
 
 const icons = {
@@ -89,6 +90,7 @@ const Navbar = () => {
           </ul>
 
           <div className="ml-auto sm:ml-0 flex items-center gap-2 sm:gap-3">
+            <SpookyControls />
             <NavLink to="/Search" title="Search" aria-label="Search" className="btn-icon w-10 h-10">
               <Icon name="browse" className="w-[18px] h-[18px]" />
             </NavLink>

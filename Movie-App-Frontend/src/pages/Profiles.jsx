@@ -175,8 +175,8 @@ function Profile() {
                   <div
                     className={`relative w-32 h-32 sm:w-40 sm:h-40 rounded-full p-1 bg-gradient-to-br from-brand via-ember to-brand/30 transition-all duration-300 ${
                       dragging
-                        ? "scale-105 shadow-[0_0_80px_-5px_rgba(239,35,60,0.9)]"
-                        : "shadow-[0_0_60px_-10px_rgba(239,35,60,0.6)]"
+                        ? "scale-105 shadow-[0_0_80px_-5px_rgb(var(--brand-rgb)/0.9)]"
+                        : "shadow-[0_0_60px_-10px_rgb(var(--brand-rgb)/0.6)]"
                     }`}
                   >
                     <div className="relative w-full h-full rounded-full overflow-hidden bg-surface-2 ring-4 ring-primary">

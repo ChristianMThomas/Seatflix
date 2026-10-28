@@ -21,6 +21,15 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+
+    // TEMP: local dev skips the backend and signs straight in as a placeholder user.
+    // Only in `npm run dev`; production builds always use the real login.
+    if (import.meta.env.DEV) {
+      login("dev-token", { userId: 0, username: credentials.username || "dev", email: "dev@localhost" });
+      navigate("/home");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -71,7 +80,7 @@ const Login = () => {
       <h1 className="text-5xl sm:text-6xl mb-2">Welcome back</h1>
       <p className="text-light-200 mb-8">Sign in to pick up right where you left off.</p>
 
-      <form onSubmit={handleLogin} className="space-y-4">
+      <form onSubmit={handleLogin} noValidate={import.meta.env.DEV} className="space-y-4">
         {/* Username input */}
         <div className="relative">
           <input

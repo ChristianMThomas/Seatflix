@@ -70,7 +70,7 @@ const Moviecard = ({ movie, className = '' }) => {
 
           {/* Hover play affordance */}
           <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-300">
-            <span className="flex items-center justify-center w-14 h-14 rounded-full bg-brand text-white shadow-[0_0_40px_rgba(239,35,60,0.7)] scale-75 group-hover:scale-100 transition-transform duration-300">
+            <span className="flex items-center justify-center w-14 h-14 rounded-full bg-brand text-white shadow-[0_0_40px_rgb(var(--brand-rgb)/0.7)] scale-75 group-hover:scale-100 transition-transform duration-300">
               <svg className="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M8 5v14l11-7z" />
               </svg>
